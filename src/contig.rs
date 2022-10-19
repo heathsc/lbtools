@@ -1,7 +1,9 @@
-use std::{collections::HashMap, io::BufRead, path::Path, sync::Arc};
+use std::{collections::HashMap, path::Path, sync::Arc};
 
 use anyhow::Context;
 use compress_io::compress::CompressIo;
+
+use crate::utils::get_next_line;
 
 /// Contig
 ///
@@ -33,19 +35,6 @@ fn parse_bool(s: &str) -> anyhow::Result<bool> {
         "true" | "1" | "yes" => Ok(true),
         "false" | "0" | "no" => Ok(false),
         _ => Err(anyhow!("Could not parse {} as bool", s)),
-    }
-}
-
-/// Read in next line and split on tabs after trimming white space
-fn get_next_line<'a, R: BufRead>(
-    rdr: &mut R,
-    buf: &'a mut String,
-) -> anyhow::Result<Option<Vec<&'a str>>> {
-    buf.clear();
-    if rdr.read_line(buf)? == 0 {
-        Ok(None)
-    } else {
-        Ok(Some(buf.trim().split('\t').collect()))
     }
 }
 

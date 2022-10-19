@@ -9,6 +9,7 @@ use crate::{
     config::Config,
     contig::contig_hash_from_file,
     gc::GcData,
+    sample::sample_vec_from_file,
     utils::{init_log, LogLevel},
 };
 
@@ -55,12 +56,20 @@ fn cli_model() -> Command {
                 .help("Set block size in base pairs"),
         )
         .arg(
-            Arg::new("threads")
+            Arg::new("tasks")
                 .short('t')
-                .long("threads")
+                .long("tasks")
                 .value_parser(value_parser!(NonZeroUsize))
                 .value_name("INT")
-                .help("Set number of threads [default: available cores]"),
+                .help("Set number of threads [default: available physical cores]"),
+        )
+        .arg(
+            Arg::new("hts_threads")
+                .short('@')
+                .long("hts_threads")
+                .value_parser(value_parser!(NonZeroUsize))
+                .value_name("INT")
+                .help("Set number of threads for sam/bam/cram reading [default: n_tasks]"),
         )
         .arg(
             Arg::new("max_template_len")
@@ -134,18 +143,50 @@ pub fn handle_cli() -> anyhow::Result<Config> {
 
     // Set up threads
     let nt = m
-        .get_one::<NonZeroUsize>("threads")
+        .get_one::<NonZeroUsize>("n_tasks")
         .map(|x| usize::from(*x))
-        .unwrap_or_else(num_cpus::get);
+        .unwrap_or_else(num_cpus::get_physical);
+
+    let hts_threads = m
+        .get_one::<NonZeroUsize>("hts_threads")
+        .map(|x| usize::from(*x))
+        .unwrap_or(nt);
+    
+    let block_size = u32::from(*m.get_one::<NonZeroU32>("block_size").unwrap());
+
+    let reference = m
+        .get_one::<PathBuf>("reference_file")
+        .expect("Missing reference file")
+        .clone();
 
     // Set up gc information from reference
-    let block_size = u32::from(*m.get_one::<NonZeroU32>("block_size").unwrap());
-    let gc_data = GcData::from_reference(
-        m.get_one::<PathBuf>("reference_file").unwrap(),
-        block_size,
-        nt,
-        &ctg_hash,
+    let gc_data = GcData::from_reference(&reference, block_size, nt, &ctg_hash)?;
+
+    let prefix = m
+        .get_one::<String>("prefix")
+        .expect("Missing default prefix")
+        .clone();
+
+    let samples = sample_vec_from_file(
+        m.get_one::<PathBuf>("sample_file")
+            .expect("Missing sample list file"),
     )?;
 
-    Ok(Config::new())
+    let mut cfg = Config::new(samples, ctg_hash, gc_data, reference, prefix);
+
+    if let Some(p) = m.get_one::<PathBuf>("output_dir") {
+        cfg.set_output_dir(p)
+    }
+    if let Some(x) = m.get_one::<usize>("min_template_len") {
+        cfg.set_min_template_len(*x)?
+    }
+    if let Some(x) = m.get_one::<usize>("max_template_len") {
+        cfg.set_min_template_len(*x)?
+    }
+    cfg.set_hts_threads(hts_threads);
+  
+    cfg.set_block_size(block_size);
+    cfg.set_n_tasks(nt);
+
+    Ok(cfg)
 }

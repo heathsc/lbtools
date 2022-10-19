@@ -1,5 +1,8 @@
-use std::fmt;
-use std::str::FromStr;
+use std::{
+    fmt,
+    str::FromStr,
+    io::BufRead,
+};
 
 use clap::ArgMatches;
 
@@ -70,4 +73,17 @@ pub fn init_log(m: &ArgMatches) {
         .timestamp(ts)
         .init()
         .unwrap();
+}
+
+/// Read in next line and split on tabs after trimming white space
+pub fn get_next_line<'a, R: BufRead>(
+    rdr: &mut R,
+    buf: &'a mut String,
+) -> anyhow::Result<Option<Vec<&'a str>>> {
+    buf.clear();
+    if rdr.read_line(buf)? == 0 {
+        Ok(None)
+    } else {
+        Ok(Some(buf.trim().split('\t').collect()))
+    }
 }

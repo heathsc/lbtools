@@ -203,10 +203,6 @@ fn multi_threaded_read<S: AsRef<Path>>(
     }
 
     debug!("Finished reading reference and calculating gc bins");
-    let tst = chash.get("chr1").unwrap();
-    for (i, k) in tst.data.iter().enumerate() {
-        println!("{}\t{:?}", i * (block_size as usize), k);
-    }
     Ok(GcData { chash })
 }
 
@@ -281,10 +277,6 @@ fn single_threaded_read<S: AsRef<Path>>(
         store_ctg_data(b, &mut chash)
     }
     debug!("Finished reading reference and calculating gc bins");
-    let tst = chash.get("chr1").unwrap();
-    for (i, k) in tst.data.iter().enumerate() {
-        println!("{}\t{:?}", i * (block_size as usize), k);
-    }
     Ok(GcData { chash })
 }
 

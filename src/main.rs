@@ -1,7 +1,11 @@
 mod cli;
 mod config;
 mod contig;
+mod controller;
+mod data;
 mod gc;
+mod input;
+mod process;
 mod sample;
 mod utils;
 
@@ -14,5 +18,5 @@ use anyhow::Context;
 
 fn main() -> anyhow::Result<()> {
     let cfg = cli::handle_cli().with_context(|| "Error processing command line arguments")?;
-    Ok(())
+    process::process_samples(&cfg)
 }
