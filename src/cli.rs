@@ -40,7 +40,7 @@ fn cli_model() -> Command {
         )
         .arg(
             Arg::new("quiet")
-                .short('q')
+                .short('Q')
                 .action(ArgAction::SetTrue)
                 .long("quiet")
                 .conflicts_with("loglevel")
@@ -56,12 +56,12 @@ fn cli_model() -> Command {
                 .help("Set block size in base pairs"),
         )
         .arg(
-            Arg::new("tasks")
+            Arg::new("threads")
                 .short('t')
-                .long("tasks")
+                .long("threads")
                 .value_parser(value_parser!(NonZeroUsize))
                 .value_name("INT")
-                .help("Set number of threads [default: available physical cores]"),
+                .help("Set number of calculation threads [default: available cores]"),
         )
         .arg(
             Arg::new("hts_threads")
@@ -69,7 +69,24 @@ fn cli_model() -> Command {
                 .long("hts_threads")
                 .value_parser(value_parser!(NonZeroUsize))
                 .value_name("INT")
-                .help("Set number of threads for sam/bam/cram reading [default: n_tasks]"),
+                .help("Set number of threads for sam/bam/cram reading [default: available cores]"),
+        )
+        .arg(
+            Arg::new("readers")
+                .short('R')
+                .long("readers")
+                .value_parser(value_parser!(NonZeroUsize))
+                .value_name("INT")
+                .help("Set maximum number of file readers operating simultaneously for sam/bam/cram reading [default: (threads + 3) / 4]"),
+        )
+        .arg(
+            Arg::new("mapq")
+                .short('q')
+                .long("mapq")
+                .value_parser(value_parser!(u8))
+                .value_name("INT")
+                .default_value("0")
+                .help("Minimum MAPQ for reads"),
         )
         .arg(
             Arg::new("max_template_len")
@@ -104,6 +121,20 @@ fn cli_model() -> Command {
                 .value_name("INT")
                 .default_value("0")
                 .help("Set minimum template length"),
+        )
+        .arg(
+            Arg::new("keep_duplicates")
+                .short('k')
+                .long("keep-duplicates")
+                .action(ArgAction::SetTrue)
+                .help("Do not remove duplicates"),
+        )
+        .arg(
+            Arg::new("ignore_dup_flag")
+                .short('D')
+                .long("ignore-duplicate-flag")
+                .action(ArgAction::SetTrue)
+                .help("Ignore duplicate flag in input file"),
         )
         .arg(
             Arg::new("sample_file")
@@ -145,13 +176,18 @@ pub fn handle_cli() -> anyhow::Result<Config> {
     let nt = m
         .get_one::<NonZeroUsize>("n_tasks")
         .map(|x| usize::from(*x))
-        .unwrap_or_else(num_cpus::get_physical);
+        .unwrap_or_else(num_cpus::get);
 
     let hts_threads = m
         .get_one::<NonZeroUsize>("hts_threads")
         .map(|x| usize::from(*x))
-        .unwrap_or(nt);
-    
+        .unwrap_or_else(num_cpus::get);
+
+    let n_readers = m
+        .get_one::<NonZeroUsize>("readers")
+        .map(|x| usize::from(*x))
+        .unwrap_or_else(|| (nt + 3) >> 2);
+
     let block_size = u32::from(*m.get_one::<NonZeroU32>("block_size").unwrap());
 
     let reference = m
@@ -174,19 +210,32 @@ pub fn handle_cli() -> anyhow::Result<Config> {
 
     let mut cfg = Config::new(samples, ctg_hash, gc_data, reference, prefix);
 
-    if let Some(p) = m.get_one::<PathBuf>("output_dir") {
-        cfg.set_output_dir(p)
-    }
     if let Some(x) = m.get_one::<usize>("min_template_len") {
         cfg.set_min_template_len(*x)?
     }
     if let Some(x) = m.get_one::<usize>("max_template_len") {
-        cfg.set_min_template_len(*x)?
+        cfg.set_max_template_len(*x)?
     }
+
+    if let Some(p) = m.get_one::<PathBuf>("output_dir") {
+        cfg.set_output_dir(p)
+    }
+
+    if let Some(x) = m.get_one::<u8>("mapq") {
+        cfg.set_min_mapq(*x)
+    }
+    if m.get_flag("keep_duplicates") {
+        cfg.set_keep_duplicates()
+    }
+    if m.get_flag("ignore_dup_flag") {
+        cfg.set_ignore_dup_flag()
+    }
+
     cfg.set_hts_threads(hts_threads);
-  
+
     cfg.set_block_size(block_size);
     cfg.set_n_tasks(nt);
+    cfg.set_n_readers(n_readers);
 
     Ok(cfg)
 }

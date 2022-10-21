@@ -32,9 +32,13 @@ pub struct Config {
     block_size: u32,
     min_template_len: usize,
     max_template_len: Option<usize>,
+    min_mapq: u8,
+    keep_duplicates: bool,
+    ignore_dup_flag: bool,
     output_prefix: String,
     hts_threads: usize,
     n_tasks: usize,
+    n_readers: usize,
 }
 
 impl Config {
@@ -55,8 +59,12 @@ impl Config {
             block_size: 1000,
             min_template_len: 0,
             max_template_len: None,
+            keep_duplicates: false,
+            ignore_dup_flag: false,
+            min_mapq: 0,
             hts_threads: 1,
             n_tasks: 1,
+            n_readers: 1,
         }
     }
 
@@ -76,6 +84,18 @@ impl Config {
         }
     }
 
+    pub fn set_min_mapq(&mut self, x: u8) {
+        self.min_mapq = x;
+    }
+
+    pub fn set_keep_duplicates(&mut self) {
+        self.keep_duplicates = true
+    }
+
+    pub fn set_ignore_dup_flag(&mut self) {
+        self.ignore_dup_flag = true
+    }
+
     pub fn set_max_template_len(&mut self, x: usize) -> anyhow::Result<()> {
         self.max_template_len = Some(x);
         if x < self.min_template_len {
@@ -91,6 +111,10 @@ impl Config {
 
     pub fn set_n_tasks(&mut self, x: usize) {
         self.n_tasks = x
+    }
+
+    pub fn set_n_readers(&mut self, x: usize) {
+        self.n_readers = x
     }
 
     pub fn sample_list(&self) -> &[Sample] {
@@ -129,11 +153,27 @@ impl Config {
         self.max_template_len
     }
 
+    pub fn min_mapq(&self) -> u8 {
+        self.min_mapq
+    }
+
     pub fn hts_threads(&self) -> usize {
         self.hts_threads
     }
 
     pub fn n_tasks(&self) -> usize {
         self.n_tasks
+    }
+
+    pub fn n_readers(&self) -> usize {
+        self.n_readers
+    }
+
+    pub fn keep_duplicates(&self) -> bool {
+        self.keep_duplicates
+    }
+
+    pub fn ignore_dup_flag(&self) -> bool {
+        self.ignore_dup_flag
     }
 }

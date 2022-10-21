@@ -40,7 +40,7 @@ pub fn open_input<P: AsRef<Path>>(
 
         // Try and attach thread pool if presemt
         if let Some(tp) = tpool {
-            debug!("Try to attach thread pool to file");
+            debug!("Attach thread pool to file");
             hts.hts_file_mut().set_thread_pool(tp)?
         }
         Ok(hts)

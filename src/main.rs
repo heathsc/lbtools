@@ -2,10 +2,12 @@ mod cli;
 mod config;
 mod contig;
 mod controller;
+mod coverage;
 mod data;
 mod gc;
 mod input;
 mod process;
+mod reader;
 mod sample;
 mod utils;
 

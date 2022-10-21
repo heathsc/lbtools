@@ -3,7 +3,13 @@ use std::{collections::HashMap, sync::Arc, thread, time::Duration};
 use crossbeam_channel::{bounded, Receiver, Sender};
 use r_htslib::*;
 
-use crate::{config::Config, controller::*, input::open_input};
+use crate::{
+    config::Config,
+    controller::*,
+    coverage::{Coverage, NormCov, RawCounts},
+    input::open_input,
+    reader::read_coverage_data,
+};
 
 fn process_task(
     cfg: &Config,
@@ -31,18 +37,17 @@ fn process_task(
                 if sample_idx.map(|x| x != i).unwrap_or(true) {
                     let fname = cfg.sample_list()[i].input_path();
                     trace!("Task {} opening file {}", ix, fname.display());
-                    let mut h = open_input(fname, ctg.is_some(), cfg.reference(), tpool)?;
+                    let h = open_input(fname, ctg.is_none(), cfg.reference(), tpool)?;
                     sample_idx = Some(i);
                     hts = Some(h);
                 }
-
-                // TODO
-                // Make dummy counts for testing
-                let mut h = HashMap::new();
-                if let Some(c) = ctg {
-                    let v: Vec<usize> = Vec::new();
-                    h.insert(c, v);
-                }
+                debug!(
+                    "Task {} reading ctg {:?} for sample {}",
+                    ix,
+                    ctg,
+                    cfg.sample_list()[sample_idx.unwrap()].name()
+                );
+                let mut h = read_coverage_data(cfg, hts.as_mut().unwrap(), ctg.as_ref())?;
                 Completed::RawCounts(i, h)
             }
             JobType::NormalizeSample(rc) => {
@@ -53,11 +58,13 @@ fn process_task(
                 }
                 Completed::NormalizedCounts(i, h)
             }
-            JobType::OutputSampleCtg(_) => Completed::None,
-            JobType::Wait => Completed::None,
+            JobType::OutputSampleCtg(_, _, _) => Completed::None,
+            JobType::Wait => {
+                let d = Duration::from_secs(1);
+                thread::sleep(d);
+                Completed::None
+            }
         };
-        let d = Duration::from_secs(1);
-        thread::sleep(d);
         snd.send(JobRequest {
             prev_results: res,
             sample_idx,
@@ -71,6 +78,10 @@ fn process_task(
 /// Create child threads to process samples
 pub fn process_samples(cfg: &Config) -> anyhow::Result<()> {
     // Set up Hts thread pool
+    debug!(
+        "Setting up hte thread pool with {} threads",
+        cfg.hts_threads()
+    );
     let tpool = HtsThreadPool::new(cfg.hts_threads());
     let tpool_ref = tpool.as_ref();
 

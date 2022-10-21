@@ -1,3 +1,4 @@
+use std::fmt::Write;
 /// Coordination of jobs between tasks
 ///
 /// The pool of process tasks (threads) request jobs from and return processed
@@ -27,6 +28,7 @@
 ///
 use std::{
     collections::{hash_map, HashMap},
+    fmt,
     sync::Arc,
 };
 
@@ -34,35 +36,46 @@ use anyhow::Context;
 use crossbeam_channel::{Receiver, Sender};
 use r_htslib::*;
 
-use crate::{config::Config, sample::Sample};
+use crate::{
+    config::Config,
+    coverage::{Coverage, NormCov, RawCounts},
+    sample::Sample,
+};
 
-#[derive(Debug)]
-pub struct Coverage {
-    v: Vec<(usize, f64)>,
-}
-
-impl Coverage {
-    pub fn new(v: Vec<(usize, f64)>) -> Self {
-        Self { v }
-    }
-}
-
-pub type RawCounts = HashMap<Arc<str>, Vec<usize>>;
-pub type NormCov = HashMap<Arc<str>, Coverage>;
-
-#[derive(Debug)]
 pub enum JobType {
     ReadData(Option<Arc<str>>),
     NormalizeSample(RawCounts),
-    OutputSampleCtg((usize, Arc<str>, Coverage)),
+    OutputSampleCtg(usize, Arc<str>, Coverage),
     Wait, // No jobs currently available, but there will be jobs in the future
 }
 
-#[derive(Debug)]
+impl fmt::Debug for JobType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::ReadData(s) => write!(f, "JobType::ReadData({:?})", s),
+            Self::NormalizeSample(_) => f.write_str("JobType::NormalizeSample"),
+            Self::OutputSampleCtg(i, s, _) => {
+                write!(f, "JobType::OutputSampleCtg({}, {:?})", *i, s)
+            }
+            Self::Wait => f.write_str("JobType::Wait"),
+        }
+    }
+}
+
 pub enum Completed {
     RawCounts(usize, RawCounts),
     NormalizedCounts(usize, NormCov),
     None,
+}
+
+impl fmt::Debug for Completed {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::RawCounts(i, _) => write!(f, "Completed::RawCounts(Sample {})", *i),
+            Self::NormalizedCounts(i, _) => write!(f, "Completed::NormalizedCounts(Sample {})", *i),
+            Self::None => f.write_str("Completed::None"),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -131,7 +144,7 @@ impl OnGoingOutput {
         trace!("OngoingOutput::next_job({})", self.sample_idx);
         self.norm_cov.pop().map(|(ctg, c)| Job {
             sample_idx: self.sample_idx,
-            job_type: JobType::OutputSampleCtg((self.sample_idx, ctg, c)),
+            job_type: JobType::OutputSampleCtg(self.sample_idx, ctg, c),
         })
     }
 }
@@ -250,6 +263,8 @@ pub fn controller(
     assert!(!sample_vec.is_empty());
     let mut sample_idx = 0;
 
+    let read_job_limit = cfg.n_readers();
+
     // Tracking for samples to be normalized
     let mut sample_data: Vec<Option<RawCounts>> = vec![None; ns];
     let mut pending_norm: Vec<(usize, RawCounts)> = Vec::new();
@@ -287,11 +302,18 @@ pub fn controller(
             Completed::None => (),
         }
 
+        // See if we can add new read jobs
+        let new_reads = track.n_read_jobs_pending < read_job_limit;
+
         // First we check if we have more contigs to read from the requested sample
-        let mut job = jr
-            .sample_idx
-            .and_then(|i| sample_vec[i].next_job())
-            // If not, we see if we are already in the process of outputting a sample
+        let mut job = if new_reads {
+            jr.sample_idx.and_then(|i| sample_vec[i].next_job())
+        } else {
+            None
+        };
+
+        // If not, we see if we are already in the process of outputting a sample
+        job = job
             .or_else(|| ongoing_output.as_mut().and_then(|o| o.next_job()))
             // Otherwise, check if there is a complete sample ready to start outputting
             .or_else(|| {
@@ -310,13 +332,17 @@ pub fn controller(
 
         // If we still have no job, check for additional sample/ctgs for reading
         if job.is_none() {
-            job = get_new_read_job(
-                // &mut ongoing_read,
-                // &mut pending_read,
-                //cfg.ctg_hash(),
-                &mut sample_vec,
-                &mut sample_idx,
-            )?
+            job = if new_reads {
+                get_new_read_job(
+                    // &mut ongoing_read,
+                    // &mut pending_read,
+                    //cfg.ctg_hash(),
+                    &mut sample_vec,
+                    &mut sample_idx,
+                )?
+            } else {
+                None
+            }
             // If we get here then we have no pending read, normalization or output jobs
             // Check if jobs have been sent for processing that have not returned.  If yes,
             // then return JobType::Wait otherwise processing is finished so we can return None.
