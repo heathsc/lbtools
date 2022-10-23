@@ -1,4 +1,3 @@
-use std::ops::Deref;
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
@@ -33,6 +32,7 @@ pub struct Config {
     min_template_len: usize,
     max_template_len: Option<usize>,
     min_mapq: u8,
+    min_qual: u8,
     keep_duplicates: bool,
     ignore_dup_flag: bool,
     output_prefix: String,
@@ -62,6 +62,7 @@ impl Config {
             keep_duplicates: false,
             ignore_dup_flag: false,
             min_mapq: 0,
+            min_qual: 0,
             hts_threads: 1,
             n_tasks: 1,
             n_readers: 1,
@@ -86,6 +87,10 @@ impl Config {
 
     pub fn set_min_mapq(&mut self, x: u8) {
         self.min_mapq = x;
+    }
+
+    pub fn set_min_qual(&mut self, x: u8) {
+        self.min_qual = x;
     }
 
     pub fn set_keep_duplicates(&mut self) {
@@ -155,6 +160,10 @@ impl Config {
 
     pub fn min_mapq(&self) -> u8 {
         self.min_mapq
+    }
+
+    pub fn min_qual(&self) -> u8 {
+        self.min_qual
     }
 
     pub fn hts_threads(&self) -> usize {

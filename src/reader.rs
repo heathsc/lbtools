@@ -1,9 +1,8 @@
 use std::{collections::HashMap, sync::Arc};
 
-use anyhow::Context;
 use r_htslib::*;
 
-use crate::{config::Config, contig::Contig, coverage::*};
+use crate::{config::Config, coverage::*};
 
 #[derive(Debug)]
 struct ReadFilter {
@@ -37,7 +36,6 @@ impl ReadFilter {
     fn pass_filter(&self, brec: &BamRec, prev_pos: &Option<(usize, usize, Option<usize>)>) -> bool {
         let flag = brec.flag();
         let mapq = brec.qual();
-
         if (flag & BAM_FPAIRED) == 0 {
             // Unpaired reads
             if mapq >= self.min_mapq && (flag & self.forbid_flags_unpaired) == 0 {
@@ -102,8 +100,9 @@ impl RawCounter {
         }
     }
 
-    fn add_raw_counts(&mut self, rec: &BamRec) {
-        let mut x = rec.pos().unwrap();
+    fn add_raw_counts(&mut self, rec: &BamRec, min_qual: u8) {
+        let read_start = rec.pos().unwrap();
+        let mut x = read_start;
         let end = rec.endpos() + 1;
         let flag = rec.flag();
         let mut y = if (flag & BAM_FPAIRED) != 0 {
@@ -151,19 +150,20 @@ impl RawCounter {
         }
         if y > x {
             // We will count bases in the interval [x, y)
-            // First get the block index of the first and last base in the interval
-            let mut i = x / self.block_size;
-            let j = (y - 1) / self.block_size;
-
-            while i < j {
-                let x1 = (i + 1) * self.block_size;
-                assert!(x1 > x);
-                self.cov[i] += x1 - x;
-                x = x1;
-                i += 1;
+            // We need to get the base qualities to apply the base quality filter
+            if let Some(qv) = rec.get_qual() {
+                let mut x1 = read_start;
+                assert!(x1 <= x);
+                for q in qv.iter() {
+                    if x1 >= x && *q >= min_qual {
+                        self.cov[x1 / self.block_size] += 1;
+                    }
+                    x1 += 1;
+                    if x1 > y {
+                        break;
+                    }
+                }
             }
-            assert!(y >= x);
-            self.cov[i] += y - x;
         } else {
             warn!(
                 "Read {} skipped due to inconsistent flags",
@@ -197,8 +197,9 @@ fn read_ctg_coverage_data(
         let tid = hts.name2tid(ctg);
         let block_size = cfg.block_size() as usize;
         let filter = ReadFilter::new(cfg);
+        trace!("Filter set to: {:?}", filter);
         let mut raw_cov = RawCounter::new(ctg, seq_len, block_size);
-        let mut rlist = hts.make_region_list(&[ctg]);
+        let rlist = hts.make_region_list(&[ctg]);
         let mut rdr: HtsItrReader<BamRec> = hts.itr_reader(&rlist);
         let mut rec = BamRec::new()?;
 
@@ -207,7 +208,7 @@ fn read_ctg_coverage_data(
         while rdr.read(&mut rec)? {
             assert_eq!(rec.tid(), tid);
             if filter.pass_filter(&rec, &prev_pos) {
-                raw_cov.add_raw_counts(&rec);
+                raw_cov.add_raw_counts(&rec, cfg.min_qual());
                 prev_pos = Some((rec.tid().unwrap(), rec.pos().unwrap(), rec.mpos()));
             }
         }
@@ -247,7 +248,7 @@ fn read_sample_coverage_data(cfg: &Config, hts: &mut Hts) -> anyhow::Result<RawC
     while rec.read(hts)? {
         if filter.pass_filter(&rec, &prev_pos) {
             if let Some(raw_cov) = chash.get_mut(&rec.tid().unwrap()) {
-                raw_cov.add_raw_counts(&rec);
+                raw_cov.add_raw_counts(&rec, cfg.min_qual());
                 prev_pos = Some((rec.tid().unwrap(), rec.pos().unwrap(), rec.mpos()));
             }
         }

@@ -78,15 +78,9 @@ impl GcBuilder {
 pub struct GcCtgData {
     name: Arc<str>,
     data: Vec<Option<u32>>,
-    block_size: u32,
 }
 
 impl GcCtgData {
-    pub fn gc_bin(&self, x: usize) -> Option<u32> {
-        let ix = x / (self.block_size as usize);
-        self.data.get(ix).and_then(|x| *x)
-    }
-
     pub fn gc(&self, ix: usize) -> Option<u32> {
         self.data.get(ix).and_then(|x| *x)
     }
@@ -96,7 +90,6 @@ impl GcCtgData {
         Self {
             name: gcb.ctg,
             data: gcb.data,
-            block_size: gcb.block_size,
         }
     }
 }

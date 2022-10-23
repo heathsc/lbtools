@@ -1,15 +1,11 @@
 use anyhow::Context;
-use std::{collections::HashMap, sync::Arc, thread, time::Duration};
+use std::{thread, time::Duration};
 
 use crossbeam_channel::{bounded, Receiver, Sender};
 use r_htslib::*;
 
 use crate::{
-    config::Config,
-    controller::*,
-    coverage::{Coverage, NormCov, RawCounts},
-    input::open_input,
-    normalize::normalize_sample,
+    config::Config, controller::*, input::open_input, normalize::normalize_sample, output::*,
     reader::read_coverage_data,
 };
 
@@ -61,7 +57,10 @@ fn process_task(
                 let h = normalize_sample(cfg, rc);
                 Completed::NormalizedCounts(i, h)
             }
-            JobType::OutputSampleCtg(_, _, _) => Completed::None,
+            JobType::OutputSampleCtg(sample_idx, ctg, cov) => {
+                output_sample_cfg(cfg, sample_idx, &ctg, cov)?;
+                Completed::None
+            }
             JobType::Wait => {
                 let d = Duration::from_secs(5);
                 thread::sleep(d);
@@ -87,6 +86,9 @@ pub fn process_samples(cfg: &Config) -> anyhow::Result<()> {
     );
     let tpool = HtsThreadPool::new(cfg.hts_threads());
     let tpool_ref = tpool.as_ref();
+
+    // Set up output
+    setup_output(cfg)?;
 
     let mut res = Vec::new();
     thread::scope(|sc| {

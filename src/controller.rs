@@ -1,4 +1,3 @@
-use std::fmt::Write;
 /// Coordination of jobs between tasks
 ///
 /// The pool of process tasks (threads) request jobs from and return processed
@@ -26,11 +25,7 @@ use std::fmt::Write;
 ///
 ///   Processing of an output job has no results returned (just a request for a new job)
 ///
-use std::{
-    collections::{hash_map, HashMap},
-    fmt,
-    sync::Arc,
-};
+use std::{collections::hash_map, fmt, sync::Arc};
 
 use anyhow::Context;
 use crossbeam_channel::{Receiver, Sender};

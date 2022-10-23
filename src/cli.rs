@@ -40,7 +40,6 @@ fn cli_model() -> Command {
         )
         .arg(
             Arg::new("quiet")
-                .short('Q')
                 .action(ArgAction::SetTrue)
                 .long("quiet")
                 .conflicts_with("loglevel")
@@ -81,12 +80,21 @@ fn cli_model() -> Command {
         )
         .arg(
             Arg::new("mapq")
-                .short('q')
+                .short('Q')
                 .long("mapq")
                 .value_parser(value_parser!(u8))
                 .value_name("INT")
                 .default_value("0")
                 .help("Minimum MAPQ for reads"),
+        )
+        .arg(
+            Arg::new("qual")
+                .short('q')
+                .long("qual")
+                .value_parser(value_parser!(u8))
+                .value_name("INT")
+                .default_value("0")
+                .help("Minimum base quality"),
         )
         .arg(
             Arg::new("max_template_len")
@@ -217,12 +225,15 @@ pub fn handle_cli() -> anyhow::Result<Config> {
         cfg.set_max_template_len(*x)?
     }
 
-    if let Some(p) = m.get_one::<PathBuf>("output_dir") {
+    if let Some(p) = m.get_one::<PathBuf>("dir") {
         cfg.set_output_dir(p)
     }
 
     if let Some(x) = m.get_one::<u8>("mapq") {
         cfg.set_min_mapq(*x)
+    }
+    if let Some(x) = m.get_one::<u8>("qual") {
+        cfg.set_min_qual(*x)
     }
     if m.get_flag("keep_duplicates") {
         cfg.set_keep_duplicates()

@@ -1,11 +1,10 @@
-use std::collections::{HashMap, VecDeque};
+use std::collections::HashMap;
 
 use crate::{config::Config, coverage::*, gc::N_GC_BINS};
 
-// const MIN_COUNTS: usize = 1;
-
-fn collect_bin_data(cfg: &Config, rc: RawCounts) -> Vec<Vec<usize>> {
-    let mut bin_counts: Vec<Vec<usize>> = vec![Vec::new(); N_GC_BINS as usize];
+/// Collect counts per GC bin from the requested chromosomes
+fn collect_bin_data(cfg: &Config, rc: &RawCounts) -> Vec<Vec<f64>> {
+    let mut bin_counts: Vec<Vec<f64>> = vec![Vec::new(); N_GC_BINS as usize];
     for contig in cfg
         .ctg_hash()
         .values()
@@ -19,7 +18,7 @@ fn collect_bin_data(cfg: &Config, rc: RawCounts) -> Vec<Vec<usize>> {
                 .expect("Missing GC data for contig");
             for (ix, ct) in raw_cts.iter().enumerate() {
                 if let Some(j) = gc.gc(ix) {
-                    bin_counts[j as usize].push(*ct);
+                    bin_counts[j as usize].push(*ct as f64);
                 }
             }
         }
@@ -30,16 +29,16 @@ fn collect_bin_data(cfg: &Config, rc: RawCounts) -> Vec<Vec<usize>> {
 struct Obs {
     n: usize,  // Number of observations
     ix: usize, // Original GC bin
-    quartiles: [usize; 3],
+    quartiles: [f64; 3],
 }
 
 impl Obs {
-    fn new(ix: usize, v: &mut [usize]) -> Option<Self> {
+    fn new(ix: usize, v: &mut [f64]) -> Option<Self> {
         let n = v.len();
         if n == 0 {
             None
         } else {
-            v.sort_unstable();
+            v.sort_unstable_by(|a, b| a.partial_cmp(b).unwrap());
             let quartiles = [v[n >> 2], v[n >> 1], v[(n * 3) >> 2]];
             Some(Self { n, ix, quartiles })
         }
@@ -80,14 +79,14 @@ impl Accum {
         // sanity check
         assert!(d <= 1.0);
         // tricube kernel
-        let z = (1.0 - d * d * d);
+        let z = 1.0 - d * d * d;
         // weight = (1/estimate variance) * tricubic kernel
         let w = o.weight() * z * z * z;
         let x2 = x * x;
         let x3 = x * x2;
         let x4 = x2 * x2;
         // Use the median as our y value
-        let y = o.quartiles[1] as f64;
+        let y = o.quartiles[1];
         // Accumulate lower triangle of XWX
         self.xwx[0] += w; // Sigma w
         self.xwx[1] += w * x; // w * x
@@ -162,7 +161,7 @@ impl Fit {
     fn pred(&self, pos: isize) -> Option<f64> {
         let x = (pos - self.x) as f64;
         let y = self.beta[0] + x * self.beta[1] + x * x * self.beta[2];
-        if y < 1.0 {
+        if y < 10.0 {
             None
         } else {
             Some(y)
@@ -170,7 +169,7 @@ impl Fit {
     }
 }
 
-fn smooth(mut bc: Vec<Vec<usize>>) -> Vec<Option<f64>> {
+fn smooth(mut bc: Vec<Vec<f64>>) -> Vec<Option<f64>> {
     let n = bc.len();
 
     // Get median and weights (from inverse of estimated samples variance / n)
@@ -221,16 +220,30 @@ fn smooth(mut bc: Vec<Vec<usize>>) -> Vec<Option<f64>> {
 /// Normalize coverage data for a sample based on GC content
 /// This is done by getting the median coverage per GC bin from
 /// contigs (normally the autosomes)
-pub fn normalize_sample(cfg: &Config, rc: RawCounts) -> NormCov {
+pub fn normalize_sample(cfg: &Config, mut rc: RawCounts) -> NormCov {
     // First collect counts per GC bin
-    let mut bin_counts = collect_bin_data(cfg, rc);
+    let bin_counts = collect_bin_data(cfg, &rc);
 
+    // Get predictions of coverage per GC bin
     let pred = smooth(bin_counts);
 
-    for (i, p) in pred.iter().enumerate() {
-        println!("{}\t{:?}", i, p);
+    // Use the smoothed GC estimates to normalize coverage
+    let mut nc = HashMap::with_capacity(rc.len());
+    for (ctg, mut raw_cov) in rc.drain() {
+        let mut norm_cov = Vec::with_capacity(raw_cov.len());
+        for (i, c) in raw_cov.drain(..).enumerate() {
+            let gc = cfg
+                .gc_data()
+                .ctg_data(&ctg)
+                .expect("Missing GC data for contig");
+            let corr_cov = if let Some(p) = gc.gc(i).and_then(|ix| pred[ix as usize]) {
+                ((2 * c) as f64) / p
+            } else {
+                0.0
+            };
+            norm_cov.push((c, corr_cov))
+        }
+        nc.insert(ctg, norm_cov);
     }
-
-    let mut nc = HashMap::new();
     nc
 }
