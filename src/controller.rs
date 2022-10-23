@@ -62,10 +62,11 @@ impl fmt::Debug for JobType {
     }
 }
 
+/// The child tasks send their results as Completed objects
 pub enum Completed {
-    RawCounts(usize, RawCounts),
-    NormalizedCounts(usize, NormCov),
-    None,
+    RawCounts(usize, RawCounts), // (sample id, raw (un-normalized) counts)
+    NormalizedCounts(usize, NormCov), // (sample id, normalized and raw counts
+    None, // This is returned either initially or after a task receives a Wait or OutputSampleCtg job
 }
 
 impl fmt::Debug for Completed {
@@ -78,19 +79,22 @@ impl fmt::Debug for Completed {
     }
 }
 
+/// Sent from child tasks to request a new job
 #[derive(Debug)]
 pub struct JobRequest {
-    pub prev_results: Completed,
-    pub sample_idx: Option<usize>,
-    pub task_idx: usize,
+    pub prev_results: Completed, // Returned results from previous job by this task
+    pub sample_idx: Option<usize>, // The current sample the task has been reading from (if any)
+    pub task_idx: usize, // Id of task (used to select the channel to send the reply back to)
 }
 
+/// Sent to child task in response to a JobRequest
 #[derive(Debug)]
 pub struct Job {
-    pub sample_idx: usize,
-    pub job_type: JobType,
+    pub sample_idx: usize, // The sample that will be processed
+    pub job_type: JobType, // The type of job
 }
 
+/// Keep track of pending Jobs (those hat have been sent out and the results have not yet come back)
 #[derive(Default, Debug)]
 struct Tracker {
     n_read_jobs_pending: usize,
@@ -125,6 +129,7 @@ impl Tracker {
     }
 }
 
+/// A sample that is currently being output
 struct OnGoingOutput {
     sample_idx: usize,
     norm_cov: Vec<(Arc<str>, Coverage)>,
@@ -149,6 +154,7 @@ impl OnGoingOutput {
     }
 }
 
+/// An input file: keeps track of which contigs remain to be read
 struct InputFile<'a, T> {
     sample: &'a Sample,
     sample_idx: usize,
@@ -223,6 +229,10 @@ impl<'a, T> InputFile<'a, T> {
     }
 }
 
+/// Selects an InputFile with pending contigs from sample_vec.  
+/// Starts looking at index idx and processed through the whole vector,
+/// wrapping around if required. On return idx will be set to the next
+/// index after the selected sample (if the selection is made)
 fn get_new_read_job<'a, T>(
     sample_vec: &mut [InputFile<'a, T>],
     idx: &mut usize,
@@ -242,6 +252,8 @@ fn get_new_read_job<'a, T>(
     Ok(job)
 }
 
+/// Main loop.  Recieves messages from child tasks and allocates jobs appropriately.  Will
+/// end if channel r is closed (i.e., when all child tasks exit) or on error
 pub fn controller(
     cfg: &Config,
     r: Receiver<JobRequest>,

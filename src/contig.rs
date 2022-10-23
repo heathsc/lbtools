@@ -28,6 +28,14 @@ impl Contig {
         let name = Arc::clone(&self.name);
         hash.insert(name, self);
     }
+
+    pub fn name(&self) -> &Arc<str> {
+        &self.name
+    }
+
+    pub fn use_for_normalization(&self) -> bool {
+        self.use_for_normalization
+    }
 }
 
 fn parse_bool(s: &str) -> anyhow::Result<bool> {

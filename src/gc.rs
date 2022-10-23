@@ -7,8 +7,7 @@ use r_htslib::Faidx;
 
 use crate::contig::Contig;
 
-pub const N_GC_BINS: u32 = 100;
-const MIN_GC_COUNT: u32 = (0.9 * (N_GC_BINS as f64)) as u32;
+pub const N_GC_BINS: u32 = 128;
 
 const MTAB: [usize; 256] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -26,6 +25,7 @@ struct GcBuilder {
     data: Vec<Option<u32>>,
     counts: [u32; 3],
     block_size: u32,
+    min_gc_count: u32,
     current_pos: usize,
 }
 
@@ -33,7 +33,7 @@ impl GcBuilder {
     // Returns the bin corresponding to a set of counts
     fn bin(&self) -> Option<u32> {
         let tot = self.counts[1] + self.counts[2];
-        if tot >= MIN_GC_COUNT {
+        if tot >= self.min_gc_count {
             Some(
                 (((self.counts[2] as f64 / tot as f64) * (N_GC_BINS as f64)).floor() as u32)
                     .min(N_GC_BINS - 1),
@@ -50,6 +50,7 @@ impl GcBuilder {
             counts: [0; 3],
             current_pos: 0,
             block_size,
+            min_gc_count: (0.9 * (block_size as f64)) as u32,
         }
     }
 
@@ -83,6 +84,10 @@ pub struct GcCtgData {
 impl GcCtgData {
     pub fn gc_bin(&self, x: usize) -> Option<u32> {
         let ix = x / (self.block_size as usize);
+        self.data.get(ix).and_then(|x| *x)
+    }
+
+    pub fn gc(&self, ix: usize) -> Option<u32> {
         self.data.get(ix).and_then(|x| *x)
     }
 

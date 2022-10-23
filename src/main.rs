@@ -6,6 +6,7 @@ mod coverage;
 mod data;
 mod gc;
 mod input;
+mod normalize;
 mod process;
 mod reader;
 mod sample;

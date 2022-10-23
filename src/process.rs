@@ -1,3 +1,4 @@
+use anyhow::Context;
 use std::{collections::HashMap, sync::Arc, thread, time::Duration};
 
 use crossbeam_channel::{bounded, Receiver, Sender};
@@ -8,6 +9,7 @@ use crate::{
     controller::*,
     coverage::{Coverage, NormCov, RawCounts},
     input::open_input,
+    normalize::normalize_sample,
     reader::read_coverage_data,
 };
 
@@ -47,20 +49,21 @@ fn process_task(
                     ctg,
                     cfg.sample_list()[sample_idx.unwrap()].name()
                 );
-                let mut h = read_coverage_data(cfg, hts.as_mut().unwrap(), ctg.as_ref())?;
+                let h = read_coverage_data(cfg, hts.as_mut().unwrap(), ctg.as_ref())?;
                 Completed::RawCounts(i, h)
             }
             JobType::NormalizeSample(rc) => {
-                let mut h = HashMap::new();
-                for ctg in cfg.ctg_hash().keys() {
-                    let v = Coverage::new(Vec::new());
-                    h.insert(Arc::clone(ctg), v);
-                }
+                debug!(
+                    "Task {} normalizing sample {}",
+                    ix,
+                    cfg.sample_list()[i].name()
+                );
+                let h = normalize_sample(cfg, rc);
                 Completed::NormalizedCounts(i, h)
             }
             JobType::OutputSampleCtg(_, _, _) => Completed::None,
             JobType::Wait => {
-                let d = Duration::from_secs(1);
+                let d = Duration::from_secs(5);
                 thread::sleep(d);
                 Completed::None
             }
@@ -79,12 +82,13 @@ fn process_task(
 pub fn process_samples(cfg: &Config) -> anyhow::Result<()> {
     // Set up Hts thread pool
     debug!(
-        "Setting up hte thread pool with {} threads",
+        "Setting up hts thread pool with {} threads",
         cfg.hts_threads()
     );
     let tpool = HtsThreadPool::new(cfg.hts_threads());
     let tpool_ref = tpool.as_ref();
 
+    let mut res = Vec::new();
     thread::scope(|sc| {
         let nt = cfg.n_tasks();
 
@@ -104,9 +108,34 @@ pub fn process_samples(cfg: &Config) -> anyhow::Result<()> {
             })
             .collect();
 
-        // Spawn controller processes
+        // Spawn controller process
         let control_jh = sc.spawn(|| controller(cfg, recv_ctrl, send_job));
+        drop(send_ctrl);
+
+        // Join task processes
+        for jh in join_handles.drain(..) {
+            res.push(jh.join())
+        }
+
+        // Join controller process
+        res.push(control_jh.join())
     });
+
+    // Handle any errors from controller process
+    if let Some(x) = res.pop() {
+        match x {
+            Ok(y) => y.with_context(|| "Error returned from controller process")?,
+            Err(_) => return Err(anyhow!("Error joining controller process")),
+        }
+    }
+
+    // Handler any errors from tasks
+    for (i, x) in res.drain(..).enumerate() {
+        match x {
+            Ok(y) => y.with_context(|| format!("Error returned from task {}", i + 1))?,
+            Err(_) => return Err(anyhow!("Error joining task {}", i + 1)),
+        }
+    }
 
     Ok(())
 }

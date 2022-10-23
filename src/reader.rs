@@ -153,7 +153,7 @@ impl RawCounter {
             // We will count bases in the interval [x, y)
             // First get the block index of the first and last base in the interval
             let mut i = x / self.block_size;
-            let j = ((y - 1) / self.block_size);
+            let j = (y - 1) / self.block_size;
 
             while i < j {
                 let x1 = (i + 1) * self.block_size;
