@@ -53,8 +53,10 @@ pub fn output_sample_cfg(
     );
     let bs = cfg.block_size() as f64;
     for (i, (rc, norm)) in cov.drain(..).enumerate() {
-        let x = (((i as f64) + 0.5) * bs).round() as usize;
-        writeln!(wrt, "{}\t{}\t{:.4}\t{:.4}", ctg, x, norm, (rc as f64) / bs)?
+        if let Some(z) = norm {
+            let x = (((i as f64) + 0.5) * bs).round() as usize;
+            writeln!(wrt, "{}\t{}\t{:.4}\t{:.4}", ctg, x, z, (rc as f64) / bs)?
+        }
     }
     Ok(())
 }

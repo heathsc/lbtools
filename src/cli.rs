@@ -65,7 +65,7 @@ fn cli_model() -> Command {
         .arg(
             Arg::new("hts_threads")
                 .short('@')
-                .long("hts_threads")
+                .long("hts-threads")
                 .value_parser(value_parser!(NonZeroUsize))
                 .value_name("INT")
                 .help("Set number of threads for sam/bam/cram reading [default: available cores]"),

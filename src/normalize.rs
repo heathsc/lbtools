@@ -236,11 +236,11 @@ pub fn normalize_sample(cfg: &Config, mut rc: RawCounts) -> NormCov {
                 .gc_data()
                 .ctg_data(&ctg)
                 .expect("Missing GC data for contig");
-            let corr_cov = if let Some(p) = gc.gc(i).and_then(|ix| pred[ix as usize]) {
-                ((2 * c) as f64) / p
-            } else {
-                0.0
-            };
+
+            let corr_cov = gc
+                .gc(i)
+                .and_then(|ix| pred[ix as usize])
+                .map(|p| ((2 * c) as f64) / p);
             norm_cov.push((c, corr_cov))
         }
         nc.insert(ctg, norm_cov);
