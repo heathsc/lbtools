@@ -3,7 +3,10 @@ use std::{
     path::PathBuf,
 };
 
-use clap::{crate_version, value_parser, Arg, ArgAction, Command};
+use clap::{
+    crate_authors, crate_description, crate_name, crate_version, value_parser, Arg, ArgAction,
+    Command,
+};
 
 use crate::{
     config::Config,
@@ -15,10 +18,10 @@ use crate::{
 
 /// Set up definition of command options for clap
 fn cli_model() -> Command {
-    Command::new("normalize")
-        .about("Normalize binned coverage using gc content")
+    Command::new(crate_name!())
+        .about(crate_description!())
         .version(crate_version!())
-        .author("Simon Heath")
+        .author(crate_authors!())
         .arg(
             Arg::new("timestamp")
                 .short('X')
