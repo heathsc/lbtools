@@ -19,25 +19,7 @@ however each sample is normalized independently, only using information from the
 
 ## <a name="install"></a>Installation
 
-To compile you will need an up-to-date copy of rust.  This can be
-installed locally following the instructions [here](https://www.rust-lang.org/learn/get-started).  
-Note that if you have rust already installed you should update it
-using ``rustup update`` before trying to compile baldur.
-
-You will also need to have [htslib](https://github.com/samtools/htslib) installed in a place 
-where the rust compiler can find it.  Note that *baldur* has been tested with htslib version 1.15, but older versions may work.
-
-Clone the repository and then from the lb_predict_cn directory
-use cargo to compile the application:
-```
-git clone https://github.com/heathsc/lb_predict_cn.git
-cd lb_predict_cn
-cargo build --release
-```
-If you have an error during linkage about not being able to find libhts then you will need to specify the installation location of libhts
-during the build process, for example:
-
-    RUSTFLAGS="-L /opt/share/htslib/1.15/lib/"  cargo build --release
+For installation see the instructions for the [lbtools package](https://github.com/heathsc/lbtools)
 
 After a successful build the executable will be found in target/release/.  It
 should be copied somewhere where it can be found by the shell.
