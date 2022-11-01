@@ -54,7 +54,7 @@ fn cli_model() -> Command {
                 .long("block-size")
                 .value_parser(value_parser!(NonZeroU32))
                 .value_name("INT")
-                .default_value("1000")
+                .default_value("10000")
                 .help("Set block size in base pairs"),
         )
         .arg(
