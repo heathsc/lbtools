@@ -3,7 +3,7 @@ use std::{collections::HashMap, path::Path, sync::Arc};
 use anyhow::Context;
 use compress_io::compress::CompressIo;
 
-use crate::utils::get_next_line;
+use utils::get_next_line;
 
 /// Contig
 ///

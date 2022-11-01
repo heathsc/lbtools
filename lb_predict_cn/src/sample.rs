@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use anyhow::Context;
 use compress_io::compress::CompressIo;
 
-use crate::utils::get_next_line;
+use utils::get_next_line;
 
 /// Input sample
 ///
@@ -37,7 +37,7 @@ pub fn sample_vec_from_file<S: AsRef<Path>>(fname: S) -> anyhow::Result<Vec<Samp
     let mut rdr = CompressIo::new()
         .path(&fname)
         .bufreader()
-        .with_context(|| format!("Error opening contig file {}", fname.as_ref().display()))?;
+        .with_context(|| format!("Error opening sample file {}", fname.as_ref().display()))?;
 
     trace!("Reading from sample file");
     let mut buf = String::new();

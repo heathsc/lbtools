@@ -1,5 +1,5 @@
 [workspace]
-members = ["lb_predict_cn"]
+members = ["lb_predict_cn", "lb_norm", "utils"]
 
 [workspace.package]
 version = "0.3.0"
@@ -11,3 +11,12 @@ description = "Utilities for working with whole genome sequencing data from liqu
 lto = "thin"
 debug = true
 
+[workspace.dependencies]
+log = "~0.4"
+stderrlog = "~0.5"
+clap = {version = "~4", features = ["cargo", "color"]}
+compress_io = "~0.5"
+anyhow = "~1.0"
+num_cpus = "~1"
+crossbeam-channel = "~0.5"
+utils = { path = "utils" }

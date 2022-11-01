@@ -8,12 +8,10 @@ use clap::{
     Command,
 };
 
+use utils::{init_log, LogLevel};
+
 use crate::{
-    config::Config,
-    contig::contig_hash_from_file,
-    gc::GcData,
-    sample::sample_vec_from_file,
-    utils::{init_log, LogLevel},
+    config::Config, contig::contig_hash_from_file, gc::GcData, sample::sample_vec_from_file,
 };
 
 /// Set up definition of command options for clap
@@ -114,7 +112,7 @@ fn cli_model() -> Command {
                 .value_parser(value_parser!(String))
                 .value_name("STRING")
                 .default_value("cov")
-                .help("Set maximum template length"),
+                .help("Set prefix for output file names"),
         )
         .arg(
             Arg::new("dir")
@@ -122,7 +120,7 @@ fn cli_model() -> Command {
                 .long("dir")
                 .value_parser(value_parser!(PathBuf))
                 .value_name("PATH")
-                .help("Set maximum template length [default: current directory]"),
+                .help("Set output directory [default: current directory]"),
         )
         .arg(
             Arg::new("min_template_len")

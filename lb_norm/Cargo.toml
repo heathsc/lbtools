@@ -1,5 +1,5 @@
 [package]
-name = "lb_predict_cn"
+name = "lb_norm"
 edition = "2021"
 description = "Generate binned coverage normalized for gc content from SAM/BAM/CRAM files"
 version.workspace = true
@@ -16,4 +16,5 @@ anyhow.workspace = true
 num_cpus.workspace = true
 crossbeam-channel.workspace = true
 utils.workspace = true
-r_htslib = { git = "https://github.com/heathsc/r_htslib.git" }
+regex = "1"
+

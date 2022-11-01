@@ -1,14 +1,7 @@
 mod cli;
 mod config;
-mod contig;
-mod controller;
-mod coverage;
-mod gc;
-mod input;
-mod normalize;
-mod output;
+mod io;
 mod process;
-mod reader;
 mod sample;
 
 #[macro_use]
