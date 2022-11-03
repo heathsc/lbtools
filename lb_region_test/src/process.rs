@@ -96,13 +96,13 @@ impl<'a> fmt::Display for SampleDataItem<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{}\t{}\t{:.6}\t{:.6}\t{:.6}\t{}\t{:.6e}\t",
+            "{}\t{}\t{:.6}\t{:.6}\t{}\t{:.6e}\t{:.6e}\t",
             self.reg_data.region.desc(),
             self.reg_data.n,
-            self.copy_num,
-            self.t,
             self.reg_data.sd,
+            self.copy_num,
             self.ct_dna,
+            self.t,
             self.p
         )?;
         if let Some(q) = self.q {
@@ -208,7 +208,7 @@ pub fn process_data(cfg: &Config) -> anyhow::Result<()> {
 
     writeln!(
         wrt,
-        "sample\tregion\tn\tcopy number\tt\tsd\tctDNA\tp\tp(FDR corrected)\t"
+        "sample\tregion\tn\tsd\tcopy number\tctDNA\tt\tp\tp(FDR corrected)\t"
     )?;
     for sd in sample_data.iter() {
         for item in sd.data.iter() {

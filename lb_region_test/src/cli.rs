@@ -75,7 +75,7 @@ fn cli_model() -> Command {
                 .value_parser(value_parser!(PathBuf))
                 .value_name("PATH")
                 .required(true)
-                .help("FIle with list of regions to be tested"),
+                .help("File with list of regions to be tested"),
         )
         .arg(
             Arg::new("sample_list")
