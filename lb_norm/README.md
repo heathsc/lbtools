@@ -49,7 +49,7 @@ All input files can be compressed with many programs such as bgzip, gzip, xz, zs
 An output directory is made (if not already existing) for each sample, and within this directory an output file
 is created per contig listed in the contig file.   By default, the sample output directories are created in the current 
 directory, and each contig specific file will be names cov_*contig name*.txt i.e., cov_chr2.txt.
-The behvaiour can be changed via the [command line options](#cli), in particular look at the 
+The behaviour can be changed via the [command line options](#cli), in particular look at the 
 **output-dir** and **output-prefix** options.
 
 The individual output files have a simple structure being tab delimited text files with 4 columns.
