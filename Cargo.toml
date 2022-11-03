@@ -1,5 +1,5 @@
 [workspace]
-members = ["lb_predict_cn", "lb_norm", "utils"]
+members = ["lb_predict_cn", "lb_norm", "lb_region_test", "utils"]
 
 [workspace.package]
 version = "0.3.0"

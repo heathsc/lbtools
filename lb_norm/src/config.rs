@@ -8,7 +8,6 @@ pub struct Config {
     ctg_list: Vec<Contig>,
     output_prefix: String,
     output_dir: Option<PathBuf>,
-    threads: usize,
 }
 
 impl Config {
@@ -18,14 +17,10 @@ impl Config {
             ctg_list,
             output_prefix,
             output_dir: None,
-            threads: 1,
         }
     }
     pub fn set_output_dir(&mut self, d: PathBuf) {
         self.output_dir = Some(d)
-    }
-    pub fn set_threads(&mut self, x: usize) {
-        self.threads = x
     }
 
     pub fn ctg_list(&self) -> &[Contig] {

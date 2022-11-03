@@ -1,4 +1,4 @@
-use std::{num::NonZeroUsize, path::PathBuf};
+use std::path::PathBuf;
 
 use clap::{
     crate_authors, crate_description, crate_name, crate_version, value_parser, Arg, ArgAction,
@@ -42,14 +42,6 @@ fn cli_model() -> Command {
                 .long("quiet")
                 .conflicts_with("loglevel")
                 .help("Silence all output"),
-        )
-        .arg(
-            Arg::new("threads")
-                .short('t')
-                .long("threads")
-                .value_parser(value_parser!(NonZeroUsize))
-                .value_name("INT")
-                .help("Set number of calculation threads [default: available cores]"),
         )
         .arg(
             Arg::new("input_prefix")
@@ -112,11 +104,6 @@ pub fn handle_cli() -> anyhow::Result<Config> {
 
     debug!("Processing command line options");
 
-    let nt = m
-        .get_one::<NonZeroUsize>("threads")
-        .map(|x| usize::from(*x))
-        .unwrap_or_else(num_cpus::get);
-
     let output_prefix = m
         .get_one::<String>("output_prefix")
         .expect("Missing default output prefix")
@@ -162,8 +149,6 @@ pub fn handle_cli() -> anyhow::Result<Config> {
     if let Some(p) = m.get_one::<PathBuf>("output_dir") {
         cfg.set_output_dir(p.to_owned())
     }
-
-    cfg.set_threads(nt);
 
     // Make sure output does not overlap input
     if cfg.output_prefix() == input_prefix {

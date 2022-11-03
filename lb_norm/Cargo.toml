@@ -1,7 +1,7 @@
 [package]
 name = "lb_norm"
 edition = "2021"
-description = "Generate binned coverage normalized for gc content from SAM/BAM/CRAM files"
+description = "Normalize copy number estimates using a set of controls"
 version.workspace = true
 authors.workspace = true
 

@@ -314,10 +314,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "lb_region_test"
+version = "0.3.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "compress_io",
+ "crossbeam-channel",
+ "log",
+ "num_cpus",
+ "regex",
+ "stderrlog",
+ "utils",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.137"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc7fcc620a3bff7cdd7a365be3376c97191aeaccc2a603e600951e452615bf89"
+
+[[package]]
+name = "libm"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "292a948cd991e376cf75541fe5b97a1081d713c618b4f1b9500f8844e49eb565"
 
 [[package]]
 name = "link-cplusplus"
@@ -465,6 +486,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c8132065adcfd6e02db789d9285a0deb2f3fcb04002865ab67d5fb103533898"
 
 [[package]]
+name = "special"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f70115e5d5fe08b5f02f7c709c4bf72dc299528bca63e46183e0389a12a0a645"
+dependencies = [
+ "libm",
+]
+
+[[package]]
 name = "stderrlog"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -556,6 +586,7 @@ dependencies = [
  "anyhow",
  "clap",
  "log",
+ "special",
  "stderrlog",
 ]
 

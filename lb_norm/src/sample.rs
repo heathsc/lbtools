@@ -1,6 +1,5 @@
-use std::collections::hash_map::Entry;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{hash_map::Entry, HashMap, HashSet},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -71,9 +70,9 @@ pub fn read_sample_list_from_file<P: AsRef<Path>>(fname: P) -> anyhow::Result<Ve
         )
     })? {
         line += 1;
-        // Parse input line and store to hash if valid
+        // Parse input line and store if valid
+        // Skip empty lines
         if !fields.is_empty() {
-            // Skip empty lines
             sample_vec.push(Sample::new(fields[0].to_owned()));
         }
     }

@@ -1,6 +1,5 @@
 use crate::{config::Config, io};
-use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::{collections::BTreeMap, path::PathBuf};
 
 /// Strategy
 ///
@@ -11,7 +10,7 @@ use std::path::PathBuf;
 /// the rest of the samples
 pub fn process_samples(cfg: &Config) -> anyhow::Result<()> {
     debug!("Starting processing");
-    let in_dir = cfg
+    let out_dir = cfg
         .output_dir()
         .map(|p| p.to_owned())
         .unwrap_or_else(PathBuf::new);
@@ -53,7 +52,7 @@ pub fn process_samples(cfg: &Config) -> anyhow::Result<()> {
 
         for s in cfg.sample_list().iter().filter(|x| x.is_output()) {
             if let Some(p) = s.ctg_path(ctg) {
-                let mut opath = in_dir.clone();
+                let mut opath = out_dir.clone();
                 opath.push(s.name());
                 let oname = format!("{}_{}.txt", cfg.output_prefix(), ctg);
                 opath.push(&oname);
