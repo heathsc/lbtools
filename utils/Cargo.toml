@@ -11,3 +11,4 @@ log.workspace = true
 stderrlog.workspace = true
 clap.workspace = true
 anyhow.workspace = true
+special = "0.9"
