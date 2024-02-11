@@ -66,7 +66,7 @@ impl<'a> SampleDataItem<'a> {
                     t = -t;
                 };
                 let d = delta as f64;
-                let get_ct = |x: f64| (x / d).min(1.0).max(0.0);
+                let get_ct = |x: f64| (x / d).clamp(0.0, 1.0);
                 let (a, b, c) = (
                     get_ct(diff - sdr * sd),
                     get_ct(diff),

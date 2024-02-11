@@ -175,6 +175,7 @@ setting of this will depend on the number of available cores and the performance
 
 ## <a name="changes"></a>Changes
 
+- 0.3.1 Make work with latest r_htslib
 - 0.3.0 Rename as lb_predict_cn.  Reorganize into lbtools collection.
 - 0.2.0 First public release
 - 0.1.0 First commit

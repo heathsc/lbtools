@@ -181,7 +181,7 @@ impl<'a, T> InputFile<'a, T> {
                 self.sample.name(),
                 path.display()
             );
-            let mut hts = Hts::open(path, "r").with_context(|| {
+            let mut hts = Hts::open(Some(path), "r").with_context(|| {
                 format!(
                     "Error opening input file {} for sample {}",
                     path.display(),
